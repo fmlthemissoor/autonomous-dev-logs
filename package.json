@@ -12,6 +12,7 @@
     "dev": "tsx src/cli.ts",
     "generate": "tsx src/cli.ts --dry-run",
     "send": "tsx src/cli.ts --send",
+    "inspect": "tsx scripts/inspect-tweets.ts",
     "typecheck": "tsc --noEmit",
     "start": "node dist/cli.js"
   },
