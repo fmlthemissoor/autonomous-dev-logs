@@ -3,7 +3,7 @@ import { loadConfig } from "./config.js";
 import { runPipeline } from "./pipeline.js";
 
 const printUsage = (): void => {
-  console.log(`Usage: automated-x-dev-logs [--dry-run | --send]
+  console.log(`Usage: autonomous-dev-logs [--dry-run | --send]
 
   --dry-run   Generate the thread + visual into ./out/, skip Telegram.
   --send      Generate AND deliver to Telegram (requires TELEGRAM_* env vars).

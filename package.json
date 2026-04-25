@@ -1,11 +1,11 @@
 {
-  "name": "automated-x-dev-logs",
+  "name": "autonomous-dev-logs",
   "version": "0.1.0",
   "description": "Daily X/Twitter dev-log threads generated from your Claude Code transcripts, delivered to Telegram for manual posting.",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "automated-x-dev-logs": "dist/cli.js"
+    "autonomous-dev-logs": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

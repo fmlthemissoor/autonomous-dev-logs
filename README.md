@@ -1,4 +1,4 @@
-# Automated X Dev Logs
+# Autonomous Dev Logs
 
 Turn your daily Claude Code sessions into a tweet-ready dev-log thread, delivered to Telegram for manual posting.
 
@@ -31,8 +31,8 @@ It does **not** auto-post to X. The point is a human-in-the-loop draft, not auto
 ## Install
 
 ```bash
-git clone https://github.com/fmlthemissoor/automated-x-dev-logs.git
-cd automated-x-dev-logs
+git clone https://github.com/fmlthemissoor/autonomous-dev-logs.git
+cd autonomous-dev-logs
 npm install
 cp .env.example .env
 cp config.example.yaml config.yaml
@@ -66,16 +66,16 @@ npm run send
 
 ## Schedule it (macOS)
 
-A sample `launchd` plist is in `scripts/launchd.plist.example` — runs once a day at 18:00. Edit the paths, copy to `~/Library/LaunchAgents/com.automated-x-dev-logs.plist`, then:
+A sample `launchd` plist is in `scripts/launchd.plist.example` — runs once a day at 18:00. Edit the paths, copy to `~/Library/LaunchAgents/com.autonomous-dev-logs.plist`, then:
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+launchctl load ~/Library/LaunchAgents/com.autonomous-dev-logs.plist
 ```
 
 On Linux, drop a line in `crontab -e` like:
 
 ```
-0 18 * * * cd /path/to/automated-x-dev-logs && /usr/local/bin/npm run send >> ~/automated-x-dev-logs.log 2>&1
+0 18 * * * cd /path/to/autonomous-dev-logs && /usr/local/bin/npm run send >> ~/autonomous-dev-logs.log 2>&1
 ```
 
 ## Architecture

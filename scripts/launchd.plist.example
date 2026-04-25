@@ -4,17 +4,17 @@
 
   Install:
     1. Edit the WorkingDirectory + paths below to match your machine.
-    2. Copy to ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
-    3. Run: launchctl load ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+    2. Copy to ~/Library/LaunchAgents/com.autonomous-dev-logs.plist
+    3. Run: launchctl load ~/Library/LaunchAgents/com.autonomous-dev-logs.plist
 
   Stop:
-    launchctl unload ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+    launchctl unload ~/Library/LaunchAgents/com.autonomous-dev-logs.plist
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.automated-x-dev-logs</string>
+  <string>com.autonomous-dev-logs</string>
 
   <key>ProgramArguments</key>
   <array>
@@ -24,13 +24,13 @@
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/YOUR_USERNAME/Desktop/automated-x-dev-logs</string>
+  <string>/Users/YOUR_USERNAME/Desktop/autonomous-dev-logs</string>
 
   <key>StandardOutPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/automated-x-dev-logs.log</string>
+  <string>/Users/YOUR_USERNAME/Library/Logs/autonomous-dev-logs.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/YOUR_USERNAME/Library/Logs/automated-x-dev-logs.err.log</string>
+  <string>/Users/YOUR_USERNAME/Library/Logs/autonomous-dev-logs.err.log</string>
 
   <key>StartCalendarInterval</key>
   <dict>
