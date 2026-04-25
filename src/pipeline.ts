@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { AppConfig, EnvConfig } from "./config.js";
 import { buildLlmProvider } from "./llm/factory.js";
 import { renderVisual } from "./renderers/index.js";
+import { buildVoiceCorpus, corpusIsUseful } from "./stages/learn-voice.js";
 import { planVisual } from "./stages/plan-visual.js";
 import { summarizeDay } from "./stages/summarize.js";
 import { writeThread } from "./stages/write-thread.js";
@@ -54,8 +55,20 @@ export const runPipeline = async (
   writeFileSync(join(outDir, `${stamp}-visual-plan.json`), JSON.stringify(plan, null, 2));
   console.log(`[pipeline] visual format: ${plan.format} — ${plan.rationale}`);
 
+  console.log("[pipeline] building voice corpus…");
+  const corpus = await buildVoiceCorpus(app, env);
+  writeFileSync(join(outDir, `${stamp}-voice-corpus.json`), JSON.stringify(corpus, null, 2));
+  console.log(
+    `[pipeline] corpus: high=${corpus.highPerforming.length} low=${corpus.lowPerforming.length} ` +
+      `selfVoice=${corpus.selfVoice.length} voiceAccounts=${corpus.voiceAccounts.length}`,
+  );
+  for (const note of corpus.notes) console.log(`[pipeline]   note: ${note}`);
+  if (!corpusIsUseful(corpus) && app.tweet_examples.length === 0) {
+    throw new Error("Voice corpus is empty and no manual tweet_examples are configured.");
+  }
+
   console.log("[pipeline] writing thread…");
-  const thread = await writeThread(summary, plan, app, llm);
+  const thread = await writeThread(summary, plan, app, corpus, llm);
   const threadPath = join(outDir, `${stamp}-thread.txt`);
   writeFileSync(
     threadPath,

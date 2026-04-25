@@ -8,9 +8,10 @@ persona: |
   Solo dev shipping a Solana analytics product. Threads mix shipping updates,
   bugs found, and small lessons. Tone is plainspoken and a bit dry. No hype.
 
-# Few-shot examples of YOUR actual tweets. The more representative, the better.
-# Aim for 10-20 examples. Pick ones that match the voice and structure you want
-# the generator to mimic.
+# Few-shot examples of YOUR actual tweets. Used as a fallback / supplement
+# when voice_learning is disabled or returns no usable signal. Aim for 10-20
+# examples. With voice_learning enabled this list can be small or even empty
+# (one entry minimum) — the auto-fetched tweets do most of the work.
 tweet_examples:
   - |
     Spent the morning ripping out a "clever" cache layer.
@@ -27,6 +28,55 @@ tweet_examples:
     by default if your y-axis values are wide.
 
     `tight_layout()` exists for a reason.
+
+# Voice learning. When enabled, the system fetches recent tweets from your
+# own account AND from any inspiration accounts you list, then uses them as
+# few-shot examples for the writer.
+#
+# Two flavors of signal:
+#   - your_handle:     YOUR tweets, bucketed by engagement (likes/RTs/replies/
+#                      views). Top-quartile become "high-performing" examples;
+#                      bottom-quartile become "anti-pattern" examples. The
+#                      writer learns from contrast — what works for you vs.
+#                      what flops.
+#   - voice_accounts:  OTHER accounts whose voice you want to imitate. Used
+#                      as unlabeled style examples (no metrics — these aren't
+#                      yours, so engagement isn't comparable). Just style.
+#
+# Requires SOCIALDATA_API_KEY in .env. Get one at https://socialdata.tools.
+voice_learning:
+  enabled: false
+  # Your handle (with or without the @). Leave blank to skip the engagement
+  # bucketing entirely and only pull voice_accounts.
+  your_handle: ""
+  # Accounts whose tone/structure you want to imitate. Plain handles, no @.
+  voice_accounts: []
+  # How many tweets to pull per handle. Higher = more signal, higher API cost.
+  max_tweets_per_handle: 300
+  # Below this many original tweets (after retweet/reply filter), the system
+  # treats your tweets as unlabeled voice examples instead of bucketing.
+  # Engagement gaps are statistical noise on tiny samples.
+  min_originals_for_bucketing: 20
+  # How many top + bottom tweets to surface as labeled examples.
+  examples_per_bucket: 6
+  # How many recent tweets per voice_account.
+  examples_per_voice_account: 4
+  # Re-fetch from SocialData this often. Cached corpus is reused in between
+  # daily runs to keep API spend negligible.
+  refresh_interval_hours: 168  # 7 days
+  # Engagement scoring weights. Tune to taste.
+  weights:
+    likes: 1
+    retweets: 3
+    replies: 2
+    quotes: 1
+    bookmarks: 2
+    views: 0.005
+  # Skip tweets with fewer views than this — they're statistical noise.
+  min_views_floor: 50
+  # Drop replies (in_reply_to_status_id is set). They usually aren't
+  # representative of your "broadcast" voice.
+  exclude_replies: true
 
 # How long the thread should be. The model can return fewer if the day is light.
 thread:
