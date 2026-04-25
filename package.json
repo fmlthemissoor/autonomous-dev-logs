@@ -1,0 +1,43 @@
+{
+  "name": "automated-x-dev-logs",
+  "version": "0.1.0",
+  "description": "Daily X/Twitter dev-log threads generated from your Claude Code transcripts, delivered to Telegram for manual posting.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "automated-x-dev-logs": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "generate": "tsx src/cli.ts --dry-run",
+    "send": "tsx src/cli.ts --send",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/cli.js"
+  },
+  "keywords": [
+    "claude-code",
+    "twitter",
+    "x",
+    "telegram",
+    "automation",
+    "dev-log",
+    "anthropic"
+  ],
+  "author": "fmlthemissoor",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.5",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

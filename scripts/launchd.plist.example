@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS launchd job — runs `npm run send` once a day at 18:00.
+
+  Install:
+    1. Edit the WorkingDirectory + paths below to match your machine.
+    2. Copy to ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+    3. Run: launchctl load ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+
+  Stop:
+    launchctl unload ~/Library/LaunchAgents/com.automated-x-dev-logs.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.automated-x-dev-logs</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/npm</string>
+    <string>run</string>
+    <string>send</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/YOUR_USERNAME/Desktop/automated-x-dev-logs</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/automated-x-dev-logs.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/automated-x-dev-logs.err.log</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>18</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

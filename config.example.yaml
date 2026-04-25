@@ -1,0 +1,58 @@
+# Copy this to `config.yaml` and edit. `config.yaml` is gitignored.
+
+# Your X/Twitter handle — used in prompts so the model knows whose voice to imitate.
+handle: "@your_handle"
+
+# A short description of what you usually tweet about. Helps the model stay on-topic.
+persona: |
+  Solo dev shipping a Solana analytics product. Threads mix shipping updates,
+  bugs found, and small lessons. Tone is plainspoken and a bit dry. No hype.
+
+# Few-shot examples of YOUR actual tweets. The more representative, the better.
+# Aim for 10-20 examples. Pick ones that match the voice and structure you want
+# the generator to mimic.
+tweet_examples:
+  - |
+    Spent the morning ripping out a "clever" cache layer.
+    400 lines deleted, latency the same, fewer footguns.
+
+    Reminder: every cache is a bet that staleness is fine.
+  - |
+    Investigator agent kept burning steps revisiting the same 404 page.
+    Added a one-line repeat-warning. Step count dropped 22%.
+
+    Most agent perf wins are bookkeeping, not models.
+  - |
+    Today I learned: matplotlib axis labels render outside the canvas
+    by default if your y-axis values are wide.
+
+    `tight_layout()` exists for a reason.
+
+# How long the thread should be. The model can return fewer if the day is light.
+thread:
+  min_tweets: 2
+  max_tweets: 6
+  per_tweet_char_limit: 280
+
+# Visual planner config. Set `enabled: false` to always skip visuals.
+visual:
+  enabled: true
+  # Which formats the planner is allowed to choose from.
+  # Supported: none, chart, code_snippet, illustration
+  allowed_formats:
+    - none
+    - chart
+    - code_snippet
+  # Used as the title/header of generated charts.
+  chart_title_prefix: "Today in code"
+
+# What to include from your transcripts. Sensitive content can be excluded here.
+transcripts:
+  # Only include sessions whose cwd matches one of these substrings.
+  # Leave empty to include all projects.
+  include_cwd_substrings: []
+  # Always exclude sessions whose cwd matches one of these substrings.
+  exclude_cwd_substrings:
+    - "secrets"
+  # Drop tool results larger than this (chars). Tool calls themselves are kept.
+  max_tool_result_chars: 800

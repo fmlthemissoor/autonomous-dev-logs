@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+.env
+.env.local
+*.log
+.DS_Store
+config.yaml
+config.local.yaml
+.cache/
+.idea/
+.vscode/
