@@ -13,6 +13,8 @@
     "generate": "tsx src/cli.ts --dry-run",
     "send": "tsx src/cli.ts --send",
     "inspect": "tsx scripts/inspect-tweets.ts",
+    "refresh-voice": "tsx scripts/refresh-voice.ts",
+    "refresh-personal-feed": "tsx scripts/refresh-personal-feed.ts",
     "typecheck": "tsc --noEmit",
     "start": "node dist/cli.js"
   },

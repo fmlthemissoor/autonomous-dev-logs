@@ -8,5 +8,6 @@ out/
 config.yaml
 config.local.yaml
 .cache/
+data/
 .idea/
 .vscode/

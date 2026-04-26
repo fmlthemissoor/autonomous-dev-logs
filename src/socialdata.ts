@@ -21,7 +21,7 @@ const TweetSchema = z.object({
   id_str: z.string(),
   full_text: z.string().default(""),
   tweet_created_at: z.string(),
-  type: z.enum(["tweet", "retweet", "quote"]).default("tweet"),
+  type: z.enum(["tweet", "retweet", "quote", "reply"]).default("tweet"),
   is_quote_status: z.boolean().default(false),
   is_pinned: z.boolean().default(false),
   in_reply_to_status_id_str: z.string().nullable().default(null),
@@ -74,6 +74,9 @@ export const fetchTweets = async (
   options: FetchTweetsOptions,
 ): Promise<SocialDataTweet[]> => {
   const out: SocialDataTweet[] = [];
+  // SocialData repeats pinned tweets (and occasionally page-boundary tweets)
+  // across pages, so dedupe by id_str as we go.
+  const seen = new Set<string>();
   let cursor: string | null | undefined;
   const maxPages = options.maxPages ?? 10;
 
@@ -89,7 +92,11 @@ export const fetchTweets = async (
     }
     const json = (await response.json()) as unknown;
     const parsed = TweetsResponseSchema.parse(json);
-    out.push(...parsed.tweets);
+    for (const t of parsed.tweets) {
+      if (seen.has(t.id_str)) continue;
+      seen.add(t.id_str);
+      out.push(t);
+    }
     if (out.length >= options.maxTweets) {
       return out.slice(0, options.maxTweets);
     }

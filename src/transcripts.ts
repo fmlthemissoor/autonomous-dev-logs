@@ -186,6 +186,21 @@ export const buildDayDigest = (app: AppConfig, env: EnvConfig): DayDigest => {
       // Skip turns with no useful signal (empty text, no tool calls, no tool results).
       if (!text && toolCalls.length === 0 && toolResults.length === 0) continue;
 
+      // Content-level exclusion: drop turns whose text or tool inputs mention
+      // any forbidden substring. Catches sessions with the right cwd but
+      // contaminated content (e.g. the model was asked to look at a file
+      // from another project).
+      const excludeText = app.transcripts.exclude_text_substrings;
+      if (excludeText.length > 0) {
+        const haystack =
+          text +
+          " " +
+          toolCalls.map((c) => c.inputPreview).join(" ") +
+          " " +
+          toolResults.map((r) => r.preview).join(" ");
+        if (excludeText.some((s) => haystack.includes(s))) continue;
+      }
+
       const sessionId = event.sessionId || "unknown";
       sessionsSeen.add(sessionId);
       projectsSeen.add(cwd);

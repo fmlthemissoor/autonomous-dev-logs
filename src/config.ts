@@ -9,44 +9,37 @@ loadDotenv();
 
 const VoiceLearningSchema = z.object({
   enabled: z.boolean().default(false),
-  /** Your X handle. Tweets are bucketed by engagement and used as labeled examples. */
-  your_handle: z.string().optional(),
-  /** Other accounts whose voice you'd like to imitate. Their tweets are used unlabeled. */
+  /** Accounts whose voice you'd like to imitate. Their tweets are used as unlabeled style examples. */
   voice_accounts: z.array(z.string()).default([]),
   /** Max tweets to pull per handle. */
   max_tweets_per_handle: z.number().int().min(10).max(2000).default(300),
+  /** How many recent voice examples to surface per inspiration account. */
+  examples_per_voice_account: z.number().int().min(1).max(50).default(6),
   /**
-   * Minimum number of original tweets (post retweet/reply filter) before we
-   * bother bucketing yours by engagement. Below this, we treat them as voice
-   * examples only — the absolute engagement numbers are too noisy.
+   * Drop tweets shorter than this many characters. Short one-liners give
+   * weak voice signal — the writer learns more from tweets that show how
+   * an account handles paragraphs, line breaks, and transitions.
    */
-  min_originals_for_bucketing: z.number().int().min(5).max(500).default(20),
-  /** How many top/bottom tweets to surface as labeled examples. */
-  examples_per_bucket: z.number().int().min(2).max(20).default(6),
-  /** How many voice examples per inspiration account. */
-  examples_per_voice_account: z.number().int().min(1).max(20).default(4),
-  /** Hours between SocialData refreshes. Cached results are reused in between. */
-  refresh_interval_hours: z.number().int().min(1).max(720).default(168),
-  /** Engagement score weights. */
-  weights: z
-    .object({
-      likes: z.number().default(1),
-      retweets: z.number().default(3),
-      replies: z.number().default(2),
-      quotes: z.number().default(1),
-      bookmarks: z.number().default(2),
-      views: z.number().default(0.005),
-    })
-    .default({}),
-  /** Ignore tweets with fewer views than this — too statistically noisy. */
-  min_views_floor: z.number().int().min(0).default(50),
+  min_tweet_chars: z.number().int().min(0).max(2000).default(120),
   /** Drop tweets that are replies to others (in_reply_to_status_id != null). */
+  exclude_replies: z.boolean().default(true),
+});
+
+const PersonalFeedSchema = z.object({
+  /** Pull your own recent tweets and feed them to the writer as PRIOR COVERAGE. */
+  enabled: z.boolean().default(false),
+  /** How many tweets to pull per refresh. */
+  max_tweets: z.number().int().min(10).max(2000).default(200),
+  /** How many of those tweets to include in the writer prompt (most recent first). */
+  max_examples_in_prompt: z.number().int().min(5).max(200).default(60),
+  /** Drop replies — they're conversational, not "broadcast" coverage. */
   exclude_replies: z.boolean().default(true),
 });
 
 const ConfigSchema = z.object({
   handle: z.string().min(1),
   persona: z.string().min(1),
+  personal_feed: PersonalFeedSchema.default({}),
   /**
    * Manual tweet examples. Used as a fallback when voice_learning is disabled
    * or returns no usable tweets. Required so the writer always has *some*
@@ -55,9 +48,17 @@ const ConfigSchema = z.object({
   tweet_examples: z.array(z.string().min(1)).min(1),
   voice_learning: VoiceLearningSchema.default({}),
   thread: z.object({
-    min_tweets: z.number().int().min(1).max(20).default(2),
+    /**
+     * Minimum tweets in a thread. Default 1 — if the day's story is best
+     * told in a single tweet, the writer is allowed to return one.
+     */
+    min_tweets: z.number().int().min(1).max(20).default(1),
     max_tweets: z.number().int().min(1).max(20).default(6),
-    per_tweet_char_limit: z.number().int().min(140).max(280).default(280),
+    /**
+     * Per-tweet character ceiling. Higher values let the writer breathe when
+     * there's substance, but the prompt instructs it not to pad.
+     */
+    per_tweet_char_limit: z.number().int().min(140).max(4000).default(560),
   }),
   visual: z.object({
     enabled: z.boolean().default(true),
@@ -70,6 +71,12 @@ const ConfigSchema = z.object({
   transcripts: z.object({
     include_cwd_substrings: z.array(z.string()).default([]),
     exclude_cwd_substrings: z.array(z.string()).default([]),
+    /**
+     * Skip individual turns whose text contains any of these substrings.
+     * Useful when a session has the right cwd but the conversation drifts
+     * into another project's files (e.g. "look at /other-project/foo.ts").
+     */
+    exclude_text_substrings: z.array(z.string()).default([]),
     max_tool_result_chars: z.number().int().min(0).default(800),
   }),
 });

@@ -4,14 +4,34 @@
 handle: "@your_handle"
 
 # A short description of what you usually tweet about. Helps the model stay on-topic.
+# Be opinionated here — "plainspoken, no hype, lessons over launches" beats a generic blurb.
 persona: |
   Solo dev shipping a Solana analytics product. Threads mix shipping updates,
-  bugs found, and small lessons. Tone is plainspoken and a bit dry. No hype.
+  bugs found, and small lessons. Tone is plainspoken and a bit dry. No hype,
+  no feature lists, no marketing language.
 
-# Few-shot examples of YOUR actual tweets. Used as a fallback / supplement
-# when voice_learning is disabled or returns no usable signal. Aim for 10-20
-# examples. With voice_learning enabled this list can be small or even empty
-# (one entry minimum) — the auto-fetched tweets do most of the work.
+# Personal feed. Pulls your own recent tweets so the writer knows what your
+# followers have already seen, and adjusts depth accordingly:
+#   - Topics already covered in depth → write low-key, skip the introduction.
+#   - Topics new or barely touched → introduce more fully.
+#
+# Built explicitly via `npm run refresh-personal-feed` (saved to
+# data/personal-feed.json). Daily runs only read from disk.
+# Requires SOCIALDATA_API_KEY in .env.
+personal_feed:
+  enabled: false
+  # How many of your tweets to pull on refresh.
+  max_tweets: 200
+  # How many of those to include in the writer prompt (most recent first).
+  # Higher = more coverage signal at the cost of more tokens per run.
+  max_examples_in_prompt: 60
+  # Drop replies — they're conversational, not broadcast coverage.
+  exclude_replies: true
+
+# Few-shot examples of tweets in the voice you want. Used as fallback when
+# voice_learning is disabled or returns nothing usable. Aim for 5-20.
+# With voice_learning enabled this can stay short — the auto-fetched tweets
+# from your voice_accounts do most of the work.
 tweet_examples:
   - |
     Spent the morning ripping out a "clever" cache layer.
@@ -29,60 +49,47 @@ tweet_examples:
 
     `tight_layout()` exists for a reason.
 
-# Voice learning. When enabled, the system fetches recent tweets from your
-# own account AND from any inspiration accounts you list, then uses them as
-# few-shot examples for the writer.
+# Voice learning. When enabled, fetches recent tweets from accounts whose
+# style you want to imitate and feeds them to the writer as unlabeled style
+# examples. No engagement scoring — pure tone/structure mimicry.
 #
-# Two flavors of signal:
-#   - your_handle:     YOUR tweets, bucketed by engagement (likes/RTs/replies/
-#                      views). Top-quartile become "high-performing" examples;
-#                      bottom-quartile become "anti-pattern" examples. The
-#                      writer learns from contrast — what works for you vs.
-#                      what flops.
-#   - voice_accounts:  OTHER accounts whose voice you want to imitate. Used
-#                      as unlabeled style examples (no metrics — these aren't
-#                      yours, so engagement isn't comparable). Just style.
-#
-# Requires SOCIALDATA_API_KEY in .env. Get one at https://socialdata.tools.
+# Requires SOCIALDATA_API_KEY in .env. Get one at https://socialdata.tools
+# (pay-as-you-go, fractions of a cent per call).
 voice_learning:
   enabled: false
-  # Your handle (with or without the @). Leave blank to skip the engagement
-  # bucketing entirely and only pull voice_accounts.
-  your_handle: ""
-  # Accounts whose tone/structure you want to imitate. Plain handles, no @.
+  # Accounts whose tone/structure you want to mimic. Plain handles, no @.
+  # Pick 2-5 writers whose voice you genuinely admire — fewer, tighter signal
+  # beats a long list.
   voice_accounts: []
   # How many tweets to pull per handle. Higher = more signal, higher API cost.
   max_tweets_per_handle: 300
-  # Below this many original tweets (after retweet/reply filter), the system
-  # treats your tweets as unlabeled voice examples instead of bucketing.
-  # Engagement gaps are statistical noise on tiny samples.
-  min_originals_for_bucketing: 20
-  # How many top + bottom tweets to surface as labeled examples.
-  examples_per_bucket: 6
-  # How many recent tweets per voice_account.
-  examples_per_voice_account: 4
-  # Re-fetch from SocialData this often. Cached corpus is reused in between
-  # daily runs to keep API spend negligible.
-  refresh_interval_hours: 168  # 7 days
-  # Engagement scoring weights. Tune to taste.
-  weights:
-    likes: 1
-    retweets: 3
-    replies: 2
-    quotes: 1
-    bookmarks: 2
-    views: 0.005
-  # Skip tweets with fewer views than this — they're statistical noise.
-  min_views_floor: 50
+  # How many recent originals per voice_account to surface as examples.
+  examples_per_voice_account: 6
+  # Drop tweets shorter than this many characters. Short one-liners give
+  # weak voice signal — the writer learns more from tweets that show how
+  # an account handles paragraphs, line breaks, and transitions.
+  # 120 ≈ two-sentence tweet. Bump higher for paragraph-style accounts.
+  min_tweet_chars: 120
   # Drop replies (in_reply_to_status_id is set). They usually aren't
-  # representative of your "broadcast" voice.
+  # representative of someone's "broadcast" voice.
   exclude_replies: true
+  #
+  # NOTE: the voice library is built explicitly via `npm run refresh-voice`
+  # and saved to data/voice-library.json. `npm run generate` and `npm run send`
+  # only READ from that file — they never call SocialData. Re-run refresh-voice
+  # whenever you want fresher examples (weekly is plenty).
 
-# How long the thread should be. The model can return fewer if the day is light.
+# Thread length controls. The writer is told that length follows substance —
+# if the day's story fits in one tweet, it returns one tweet. Don't force it.
 thread:
-  min_tweets: 2
+  # Minimum tweets. Default 1 = single-tweet output is allowed.
+  min_tweets: 1
+  # Hard ceiling on tweet count.
   max_tweets: 6
-  per_tweet_char_limit: 280
+  # Per-tweet character ceiling. Default 560 ≈ two stitched tweets, gives
+  # the writer room when there's substance. Padding is explicitly forbidden
+  # in the prompt.
+  per_tweet_char_limit: 560
 
 # Visual planner config. Set `enabled: false` to always skip visuals.
 visual:
@@ -104,5 +111,10 @@ transcripts:
   # Always exclude sessions whose cwd matches one of these substrings.
   exclude_cwd_substrings:
     - "secrets"
+  # Skip individual turns whose text or tool calls contain any of these
+  # substrings. Useful when a session has the right cwd but the conversation
+  # references files from another project (e.g. you asked Claude to look at
+  # a file outside the project). Leave empty to disable.
+  exclude_text_substrings: []
   # Drop tool results larger than this (chars). Tool calls themselves are kept.
   max_tool_result_chars: 800
