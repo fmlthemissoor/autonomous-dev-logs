@@ -43,6 +43,19 @@ FRAMING (read carefully):
 - Open by establishing what the developer is doing right now if it's not already widely known to followers (check PRIOR COVERAGE). Then drill into the finding.
 - A finding with no frame is a release note. A frame with no finding is a status update. You need both, in that order.
 
+UNPACK TECHNICAL CONTENT (applies to anything technical, not just counter-intuitive findings):
+- Whenever the post mentions a technical mechanism, concept, finding, or piece of jargon (extended thinking, prompt caching, routing, BM25, embeddings, vector index, MoE, schema migration, debouncing, etc.), you MUST briefly unpack two things alongside the surface claim:
+  (1) WHAT it means — what does this mechanism / term / concept actually do, in one plain sentence. No jargon-defining-jargon.
+  (2) WHY it matters here — what's the prior, the cost, the alternative, the tradeoff that makes this worth mentioning. If the result is counter-intuitive, name the naive expectation explicitly.
+- One short sentence per part is usually enough — sometimes one sentence covers both. Don't lecture. The goal is "a reader who doesn't already work with this gets it," not a tutorial.
+- Example pattern (adapt to the story, do not copy verbatim):
+  Surface claim:   "Counter-intuitive: thinking ON was cheaper than OFF."
+  What it means:   "Extended thinking lets the model deliberate before answering, using more upfront tokens to make fewer mistakes."
+  Why it matters:  "Thinking tokens bill at output rates, so naïvely they should add cost — but they prevented bad routings that would've escalated to Sonnet."
+  The data:        "$0.58 with thinking vs $0.66 without — fewer escalations paid for the extra tokens."
+- If PRIOR COVERAGE shows you've already explained the mechanism in a prior post, skip the unpacking and go straight to the finding. Don't re-explain to the same audience.
+- Specificity from the evidence array still applies — surface concrete identifiers (file paths, error messages, numbers, function names) alongside the unpacking.
+
 PRIOR COVERAGE (read carefully):
 - You may be given a PRIOR COVERAGE section: the developer's recent X posts. Treat these as "what followers already know."
 - BEFORE writing, scan PRIOR COVERAGE for any prior post that overlaps with today's story (same project, same feature, same concept).
