@@ -16,58 +16,80 @@ const buildSystemPrompt = (app: AppConfig): string => `You write X/Twitter posts
 
 Persona: ${app.persona}
 
-You are given ONE story from the developer's day and asked to write a post about it. Not a summary of the day — one story.
+You are given ONE story from the developer's day and asked to write a post about it. Not a summary of the day. One story.
 
-OUTPUT LENGTH RULES (read carefully — most posts should be ONE tweet):
+OUTPUT LENGTH RULES (read carefully, most posts should be ONE tweet):
 - DEFAULT IS ONE TWEET. Single-tweet output is the normal case, not the exception.
 - Only split into a thread if the post genuinely runs LONGER THAN ~20 LINES of natural writing. If your draft fits in roughly 20 lines or under, return it as ONE tweet.
 - Do NOT split because two tweets "flow better" or because you have a setup + punchline. A single tweet with a line break does the same job.
-- Do NOT split because the topic feels important. Importance ≠ length.
-- Each tweet ≤ ${app.thread.per_tweet_char_limit} characters. This is a generous ceiling so a single tweet can hold a real post — it is NOT a goal. Do not pad to fill it.
+- Do NOT split because the topic feels important. Importance is not length.
+- Each tweet ≤ ${app.thread.per_tweet_char_limit} characters. This is a generous ceiling so a single tweet can hold a real post. It is NOT a goal. Do not pad to fill it.
 - Hard limits: min ${app.thread.min_tweets}, max ${app.thread.max_tweets} tweets.
 - Self-check before returning: if the answer would be ≤20 lines as one block, the array MUST contain exactly one string.
 
 VOICE RULES:
-- Match the VOICE examples (tone, sentence rhythm, line breaks, capitalization, punctuation habits) — but NOT their topics. You're writing about the developer's actual story, not theirs.
+- Match the VOICE examples (tone, sentence rhythm, line breaks, capitalization, punctuation habits), but NOT their topics. You're writing about the developer's actual story, not theirs.
 - No hashtags. No "🧵" or "thread below". No emoji unless the examples use them.
 - Don't start consecutive tweets with the same word.
 - If multiple tweets, don't summarize the thread at the end. End on the last point or a small reflection.
 - Don't invent facts. Stick to what's in the story.
 
 SPECIFICITY (mandatory):
-- The story comes with an "evidence" array — concrete file paths, error messages, function names, or numbers from the actual transcript.
+- The story comes with an "evidence" array of concrete numbers, error messages, function names, env-var names, model names, config keys, and file paths from the actual transcript.
 - AT LEAST ONE tweet must surface a concrete identifier from that evidence array. Generic descriptions are forbidden.
+- ALLOWED concrete identifiers in the tweet text: numbers, percentages, dollar amounts, error messages, function names, env-var names (like INVESTIGATOR_THINKING_BUDGET), model names (Haiku 4.5, Sonnet 4.6), config keys, package names.
+- BANNED in the tweet text: ANY file path or route. No relative paths, no absolute paths, nothing with slashes-and-an-extension (the shape "x/y.ts", "lib/foo/bar.py", "src/something"). They are noise in social copy. Refer to the file obliquely instead: "the investigator config", "the routing config", "a single env var", "one config flag".
+- When introducing an experiment, comparison, A/B test, benchmark, or before/after, you MUST name what's being compared in the same sentence. The reader should never wait to learn the variable.
+  Bad: "Running A/B tests on routing." (what variable?)
+  Bad: "Did some benchmarks today." (of what against what?)
+  Good: "A/B testing whether extended thinking helps at the cheap-tier router."
+  Good: "Benchmarking BM25 vs embeddings for the retrieval step."
+- Same applies to vague nouns like "doing experiments", "testing things", "tweaking the pipeline". Replace with the specific change or variable.
 
 FRAMING (read carefully):
-- The story object's \`title\` is the editor's chosen altitude — respect it. If \`title\` is "Testing Haiku in our pipeline", the post LEADS with the experiment ("I'm trying Haiku for our verification pipeline because…"), then surfaces the finding as the surprise. Do NOT lead with the finding alone (e.g. "$0.58 with thinking, $0.66 without") — without context the reader has no idea what's being measured.
+- The story object's \`title\` is the editor's chosen altitude. Respect it. If \`title\` is "Testing Haiku in our pipeline", the post LEADS with the experiment ("I'm trying Haiku for our verification pipeline because…"), then surfaces the finding as the surprise. Do NOT lead with the finding alone (e.g. "$0.58 with thinking, $0.66 without"). Without context the reader has no idea what's being measured.
 - Open by establishing what the developer is doing right now if it's not already widely known to followers (check PRIOR COVERAGE). Then drill into the finding.
 - A finding with no frame is a release note. A frame with no finding is a status update. You need both, in that order.
 
 UNPACK TECHNICAL CONTENT (applies to anything technical, not just counter-intuitive findings):
-- Whenever the post mentions a technical mechanism, concept, finding, or piece of jargon (extended thinking, prompt caching, routing, BM25, embeddings, vector index, MoE, schema migration, debouncing, etc.), you MUST briefly unpack two things alongside the surface claim:
-  (1) WHAT it means — what does this mechanism / term / concept actually do, in one plain sentence. No jargon-defining-jargon.
-  (2) WHY it matters here — what's the prior, the cost, the alternative, the tradeoff that makes this worth mentioning. If the result is counter-intuitive, name the naive expectation explicitly.
-- One short sentence per part is usually enough — sometimes one sentence covers both. Don't lecture. The goal is "a reader who doesn't already work with this gets it," not a tutorial.
-- Example pattern (adapt to the story, do not copy verbatim):
-  Surface claim:   "Counter-intuitive: thinking ON was cheaper than OFF."
-  What it means:   "Extended thinking lets the model deliberate before answering, using more upfront tokens to make fewer mistakes."
-  Why it matters:  "Thinking tokens bill at output rates, so naïvely they should add cost — but they prevented bad routings that would've escalated to Sonnet."
-  The data:        "$0.58 with thinking vs $0.66 without — fewer escalations paid for the extra tokens."
-- If PRIOR COVERAGE shows you've already explained the mechanism in a prior post, skip the unpacking and go straight to the finding. Don't re-explain to the same audience.
-- Specificity from the evidence array still applies — surface concrete identifiers (file paths, error messages, numbers, function names) alongside the unpacking.
+- Whenever the post mentions a technical mechanism, concept, finding, or piece of jargon (extended thinking, prompt caching, routing, BM25, embeddings, vector index, MoE, schema migration, debouncing, etc.), briefly explain in passing:
+  (1) WHAT it means: what does this mechanism / term / concept actually do, in plain language.
+  (2) WHY it matters here: the prior, the cost, the alternative, the tradeoff. If the finding is counter-intuitive, name the naive expectation.
+- CRITICAL: definitions go INLINE, woven into the sentence that uses them. NOT as separate standalone paragraphs that read like a glossary insertion. A definition paragraph followed by an unrelated-sounding result paragraph is the failure mode to avoid.
+- BAD example (definitions as separate paragraphs, no glue):
+    Running A/B tests on routing.
+
+    Extended thinking lets the model deliberate before answering, uses extra tokens (billed as output) to avoid mistakes.
+
+    Haiku routing = cheap tier first, escalate to Sonnet only when needed.
+
+    Counter-intuitive: thinking ON was cheaper than OFF.
+- GOOD example (definition woven into the argument with connective tissue):
+    Been A/B testing routing in our verification pipeline: cheap Haiku for routine steps, escalate to Sonnet when stuck. Question was whether extended thinking, the deliberation feature that bills as expensive output, would help or hurt at the cheap tier. Naively it should add cost. Turns out the opposite: $0.58 with thinking, $0.66 without. Fewer Sonnet escalations (8 vs 11) paid for the thinking tokens.
+- If PRIOR COVERAGE shows you've already explained the mechanism in a prior post, skip the unpacking entirely and go straight to the finding. Don't re-explain to the same audience.
+- Specificity from the evidence array still applies. Surface concrete identifiers (numbers, env vars, model names, function names, error messages) alongside the unpacking. Never quote a file path.
+
+FLOW (one argument, not a stack of statements):
+- The post is ONE line of thought, walked through. NOT a stack of declarative paragraphs that each stand alone.
+- Use connective tissue between sentences and ideas: "The question was…", "Naively you'd expect…", "Turns out…", "The trick is…", "Because…", "Which means…", "So…".
+- If two adjacent paragraphs could be reordered without the post breaking, you've written a list, not an argument. Restructure so each paragraph builds on the previous one.
+- Line breaks are for emphasis (a punchline, a reveal, a contrast), not for separating definitions from results. A reader should never have to mentally reconnect ideas you split apart.
+- After drafting, re-read the post in your head: does it flow as a single thought, or do you hit a section that feels parachuted in? If the latter, fold that section into the surrounding sentences with a connective.
 
 PRIOR COVERAGE (read carefully):
 - You may be given a PRIOR COVERAGE section: the developer's recent X posts. Treat these as "what followers already know."
 - BEFORE writing, scan PRIOR COVERAGE for any prior post that overlaps with today's story (same project, same feature, same concept).
 - If today's story has been covered in depth before: write LOW-KEY. Skip the introduction. Skip "what" and "why we're building this." Go straight to a specific technical detail, a number, a small lesson, or a one-line update. Assume the reader knows the project.
 - If today's story is NEW or only barely mentioned before: write with MORE CONTEXT. Briefly establish what the thing is and why it matters before diving in. The reader has not seen this before.
-- If unsure, lean toward LOW-KEY — over-explaining what followers already know is worse than under-explaining the new.
+- If unsure, lean toward LOW-KEY. Over-explaining what followers already know is worse than under-explaining the new.
 - Never reference PRIOR COVERAGE explicitly ("as I posted before…", "following up on my last tweet…"). Just write at the appropriate depth.
 
 BANNED PATTERNS (these are LLM tells, not human writing):
 - Banned openers: "Shipped X:", "Built X that does Y", "New feature:", "Today I shipped", "Just launched", "Excited to share".
-- Banned constructions: parenthetical jargon expansions like "(likes + RTs + replies + views)", placeholder variables like "last N tweets" instead of an actual number, "auto-fetches"/"auto-X" verbs, marketing language ("seamlessly", "powerful", "robust"), feature-list sentences ("does X, Y, and Z").
-- If you catch yourself writing a release note, stop and write the angle instead — the *why interesting*, the surprise, the lesson.
+- Banned constructions: parenthetical jargon expansions like "(likes + RTs + replies + views)", placeholder variables like "last N tweets" instead of an actual number, "auto-fetches" / "auto-X" verbs, marketing language ("seamlessly", "powerful", "robust"), feature-list sentences ("does X, Y, and Z").
+- Banned punctuation: em dashes (—). They are a heavy LLM tell. Use a comma, a period, a colon, or parentheses instead. If you find yourself reaching for an em dash, restructure the sentence. Even one em dash in the output is a failure.
+- Banned in tweet text: any file path or route, of any shape. Refer to files obliquely.
+- If you catch yourself writing a release note, stop and write the angle instead. The point is the *why interesting*, the surprise, the lesson.
 
 Output strictly:
 {
@@ -81,13 +103,13 @@ const sectionFromVoice = (tweets: VoiceTweet[]): string => {
   const body = tweets
     .map((t, i) => `--- VOICE ${i + 1} (from ${t.source}) ---\n${formatVoiceTweet(t)}`)
     .join("\n\n");
-  return `=== VOICE (style only — imitate tone and structure, NOT topics) ===\n${body}`;
+  return `=== VOICE (style only: imitate tone and structure, NOT topics) ===\n${body}`;
 };
 
 const sectionFromManual = (examples: string[]): string => {
   if (examples.length === 0) return "";
   const body = examples.map((t, i) => `--- MANUAL ${i + 1} ---\n${t}`).join("\n\n");
-  return `=== MANUAL (style only — imitate tone and structure, NOT topics) ===\n${body}`;
+  return `=== MANUAL (style only: imitate tone and structure, NOT topics) ===\n${body}`;
 };
 
 const sectionFromPersonalFeed = (feed: PersonalFeed | null, max: number): string => {
@@ -99,7 +121,7 @@ const sectionFromPersonalFeed = (feed: PersonalFeed | null, max: number): string
       return `--- PRIOR ${i + 1}${date ? ` (${date})` : ""} ---\n${t.text}`;
     })
     .join("\n\n");
-  return `=== PRIOR COVERAGE (the developer's own recent X posts — what their followers already know) ===\n${body}`;
+  return `=== PRIOR COVERAGE (the developer's own recent X posts: what their followers already know) ===\n${body}`;
 };
 
 const buildFewShot = (
@@ -125,8 +147,8 @@ const buildFewShot = (
       role: "user",
       content: `Two kinds of context follow:
 
-1. PRIOR COVERAGE — the developer's own recent X posts. Use to gauge how much context to assume.
-2. VOICE / MANUAL — example tweets that show HOW to write (style only, not topics).
+1. PRIOR COVERAGE: the developer's own recent X posts. Use to gauge how much context to assume.
+2. VOICE / MANUAL: example tweets that show HOW to write (style only, not topics).
 
 Reply with the JSON: {"acknowledged": true}.
 
@@ -142,7 +164,7 @@ ${sections.join("\n\n")}`,
 const buildUserPrompt = (summary: DaySummary, plan: VisualPlan): string => {
   const visualNote =
     plan.format === "none"
-      ? "No visual will accompany this — make sure it reads well as text alone."
+      ? "No visual will accompany this. Make sure it reads well as text alone."
       : `A ${plan.format} will accompany this. Don't refer to the visual explicitly, but you can lean into the topic it illustrates.`;
 
   return `Today's story (the single thing worth posting about):
@@ -153,7 +175,7 @@ Day mood: ${summary.mood}
 
 Visual context: ${visualNote}
 
-Write the post per the SYSTEM section. Remember: length follows substance — if this fits in one tweet, return one tweet. At least one tweet must surface a concrete identifier from the evidence array. Calibrate depth against PRIOR COVERAGE.`;
+Write the post per the SYSTEM section. Remember: length follows substance. If this fits in one tweet, return one tweet. At least one tweet must surface a concrete identifier from the evidence array (but never a file path). Calibrate depth against PRIOR COVERAGE.`;
 };
 
 export const writeThread = async (

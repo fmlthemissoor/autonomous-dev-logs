@@ -105,8 +105,11 @@ export const renderChart = async (
       backgroundColor: seriesColor,
       borderColor: seriesColor,
       borderWidth: 0,
-      borderRadius: 3,
-      maxBarThickness: 36,
+      borderRadius: 4,
+      // Let bars fill their category slot rather than capping thickness —
+      // 3-category charts with a hard cap look like anemic pencils.
+      categoryPercentage: 0.7,
+      barPercentage: 0.85,
     };
   });
 
@@ -116,7 +119,14 @@ export const renderChart = async (
     options: {
       indexAxis: isHorizontalBar ? "y" : "x",
       layout: {
-        padding: { top: 20, right: 32, bottom: 20, left: 24 },
+        // Extra right padding when bars are horizontal — datalabels sit to
+        // the right of the bar end, and clipping there is the #1 ugliness.
+        padding: {
+          top: 12,
+          right: isHorizontalBar ? 72 : 28,
+          bottom: 12,
+          left: 24,
+        },
       },
       plugins: {
         title: {

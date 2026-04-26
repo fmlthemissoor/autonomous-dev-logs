@@ -69,7 +69,13 @@ Allowed formats: ${allowed.join(", ")}.
 
 Format guide:
 - "none" — when the post stands on its own and a visual would feel forced. Default to this if you're unsure. Single-tweet posts often don't need a visual.
-- "chart" — when the story has clear numeric facts (lines changed, latency before/after, step counts). Provide a Chart.js-compatible spec. Bars and horizontal bars usually beat pies. Always prefer "horizontalBar" for ranking ≥3 categories — labels stay legible.
+- "chart" — when the story has clear numeric facts (lines changed, latency before/after, step counts). Provide a Chart.js-compatible spec.
+
+CHART TYPE — pick carefully:
+- "bar" (vertical) — DEFAULT for comparing 2-6 categories. Prefer this whenever it fits.
+- "horizontalBar" — ONLY if category labels are too long to fit horizontally under vertical bars (e.g. labels with 20+ characters or multi-word phrases). Don't reach for it just because there are many categories.
+- "line" — time series or sequences with a meaningful order on the x-axis.
+- Avoid "pie" / "doughnut" entirely. They are almost always worse than a bar chart.
 
 CHART STYLE GUIDE (editorial-minimal — match this):
 - Title: short and concrete. Six words, sentence case. "Wasted steps per claim — v0.3 vs v0.4 baseline" not "Performance comparison of agent versions".
