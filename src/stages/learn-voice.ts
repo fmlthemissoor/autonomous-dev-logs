@@ -1,7 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AppConfig, EnvConfig } from "../config.js";
-import { fetchHandleTweets, type SocialDataTweet } from "../socialdata.js";
+import {
+  fetchCommunityTweets,
+  fetchHandleTweets,
+  fetchListTweets,
+  type SocialDataTweet,
+} from "../socialdata.js";
 
 export interface VoiceTweet {
   /** The actual text of the tweet. */
@@ -38,6 +43,46 @@ const toVoiceTweet = (tweet: SocialDataTweet, source: string): VoiceTweet => ({
   source,
   postedAt: tweet.tweet_created_at,
 });
+
+type VoiceSource =
+  | { kind: "handle"; handle: string; label: string }
+  | { kind: "list"; id: string; label: string }
+  | { kind: "community"; id: string; label: string };
+
+// `voice_accounts` entries can be plain handles or list/community URLs.
+// Recognized URL shapes (x.com or twitter.com):
+//   https://x.com/i/lists/1234567890
+//   https://x.com/i/communities/1234567890
+const parseVoiceSource = (raw: string): VoiceSource => {
+  const trimmed = raw.trim();
+  const listMatch = trimmed.match(
+    /^https?:\/\/(?:www\.)?(?:x|twitter)\.com\/i\/lists\/(\d+)\/?/i,
+  );
+  if (listMatch && listMatch[1]) {
+    const id = listMatch[1];
+    return { kind: "list", id, label: `list:${id}` };
+  }
+  const communityMatch = trimmed.match(
+    /^https?:\/\/(?:www\.)?(?:x|twitter)\.com\/i\/communities\/(\d+)\/?/i,
+  );
+  if (communityMatch && communityMatch[1]) {
+    const id = communityMatch[1];
+    return { kind: "community", id, label: `community:${id}` };
+  }
+  // Fall through to handle. Strip @ and any URL prefix users might paste.
+  const handle = trimmed
+    .replace(/^https?:\/\/(?:www\.)?(?:x|twitter)\.com\//i, "")
+    .replace(/^@/, "")
+    .replace(/\/$/, "");
+  return { kind: "handle", handle, label: `@${handle}` };
+};
+
+// For list/community tweets we have an embedded user; fall back to the source
+// label when the API omits it (shouldn't happen but cheap to be defensive).
+const sourceForTweet = (tweet: SocialDataTweet, fallback: string): string => {
+  const screen = tweet.user?.screen_name;
+  return screen ? `@${screen}` : fallback;
+};
 
 const libraryPath = (): string => join(process.cwd(), LIBRARY_PATH);
 
@@ -81,24 +126,37 @@ export const loadVoiceCorpus = (app: AppConfig): VoiceCorpus => {
   }
 };
 
-const collectVoiceAccount = async (
-  handle: string,
+const collectVoiceSource = async (
+  source: VoiceSource,
   apiKey: string,
   cfg: AppConfig["voice_learning"],
   notes: string[],
 ): Promise<VoiceTweet[]> => {
   try {
-    const { tweets } = await fetchHandleTweets(handle, apiKey, {
+    // Lists and communities have many authors, so fetch broader pagination
+    // by default — a 5-page cap on a busy list barely scratches the surface.
+    const fetchOptions = {
       maxTweets: cfg.max_tweets_per_handle,
-      maxPages: 5,
-    });
+      maxPages: source.kind === "handle" ? 5 : 25,
+    };
+
+    let tweets: SocialDataTweet[];
+    if (source.kind === "handle") {
+      const result = await fetchHandleTweets(source.handle, apiKey, fetchOptions);
+      tweets = result.tweets;
+    } else if (source.kind === "list") {
+      tweets = await fetchListTweets(source.id, apiKey, fetchOptions);
+    } else {
+      tweets = await fetchCommunityTweets(source.id, apiKey, fetchOptions);
+    }
+
     const originals = tweets.filter((t) => isOriginal(t, cfg.exclude_replies));
     const longEnough = originals.filter(
       (t) => cleanText(t.full_text).length >= cfg.min_tweet_chars,
     );
     if (longEnough.length === 0) {
       notes.push(
-        `${handle}: no originals ≥ ${cfg.min_tweet_chars} chars (had ${originals.length} originals total).`,
+        `${source.label}: no originals ≥ ${cfg.min_tweet_chars} chars (had ${originals.length} originals total).`,
       );
       return [];
     }
@@ -106,12 +164,15 @@ const collectVoiceAccount = async (
       .sort((a, b) => Date.parse(b.tweet_created_at) - Date.parse(a.tweet_created_at))
       .slice(0, cfg.examples_per_voice_account);
     notes.push(
-      `${handle}: pulled ${recent.length} originals ≥ ${cfg.min_tweet_chars} chars ` +
+      `${source.label}: pulled ${recent.length} originals ≥ ${cfg.min_tweet_chars} chars ` +
         `(${originals.length - longEnough.length} too short, ${tweets.length - originals.length} non-originals).`,
     );
-    return recent.map((t) => toVoiceTweet(t, handle));
+    const fallback = source.kind === "handle" ? source.label : source.label;
+    return recent.map((t) => toVoiceTweet(t, sourceForTweet(t, fallback)));
   } catch (err) {
-    notes.push(`${handle}: fetch failed — ${err instanceof Error ? err.message : String(err)}`);
+    notes.push(
+      `${source.label}: fetch failed — ${err instanceof Error ? err.message : String(err)}`,
+    );
     return [];
   }
 };
@@ -138,8 +199,9 @@ export const refreshVoiceCorpus = async (
   const notes: string[] = [];
   const voiceAccounts: VoiceTweet[] = [];
 
-  for (const account of cfg.voice_accounts) {
-    const examples = await collectVoiceAccount(account, env.socialDataApiKey, cfg, notes);
+  for (const entry of cfg.voice_accounts) {
+    const source = parseVoiceSource(entry);
+    const examples = await collectVoiceSource(source, env.socialDataApiKey, cfg, notes);
     voiceAccounts.push(...examples);
   }
 

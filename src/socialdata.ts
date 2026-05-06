@@ -6,8 +6,10 @@ import { z } from "zod";
  * public, so this works without OAuth.
  *
  * Endpoints used:
- *   GET /twitter/user/{handle}        → profile (returns id_str)
- *   GET /twitter/user/{id}/tweets     → paginated tweets (cursor in response)
+ *   GET /twitter/user/{handle}             → profile (returns id_str)
+ *   GET /twitter/user/{id}/tweets          → paginated tweets (cursor in response)
+ *   GET /twitter/list/{id}/tweets          → paginated list tweets
+ *   GET /twitter/community/{id}/tweets     → paginated community tweets
  */
 
 const ProfileSchema = z.object({
@@ -16,6 +18,15 @@ const ProfileSchema = z.object({
   followers_count: z.number(),
   statuses_count: z.number(),
 });
+
+// Embedded author info on list/community tweet responses. Optional because
+// the user-tweets endpoint omits it (the author is implied by the path).
+const TweetUserSchema = z
+  .object({
+    screen_name: z.string().optional(),
+    name: z.string().optional(),
+  })
+  .partial();
 
 const TweetSchema = z.object({
   id_str: z.string(),
@@ -32,6 +43,7 @@ const TweetSchema = z.object({
   quote_count: z.number().default(0),
   bookmark_count: z.number().default(0),
   views_count: z.number().nullable().default(null),
+  user: TweetUserSchema.optional(),
 });
 
 const TweetsResponseSchema = z.object({
@@ -68,27 +80,29 @@ export interface FetchTweetsOptions {
   maxPages?: number;
 }
 
-export const fetchTweets = async (
-  userId: string,
+// Shared cursor-pagination loop used by every tweets-returning endpoint.
+// SocialData repeats pinned tweets (and occasionally page-boundary tweets)
+// across pages, so we dedupe by id_str as we go.
+const paginateTweets = async (
+  baseUrl: string,
   apiKey: string,
   options: FetchTweetsOptions,
+  extraParams: Record<string, string> = {},
 ): Promise<SocialDataTweet[]> => {
   const out: SocialDataTweet[] = [];
-  // SocialData repeats pinned tweets (and occasionally page-boundary tweets)
-  // across pages, so dedupe by id_str as we go.
   const seen = new Set<string>();
   let cursor: string | null | undefined;
   const maxPages = options.maxPages ?? 10;
 
   for (let page = 0; page < maxPages; page++) {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(extraParams);
     if (cursor) params.set("cursor", cursor);
-    const url = `${BASE}/twitter/user/${encodeURIComponent(userId)}/tweets${
-      params.toString() ? `?${params.toString()}` : ""
-    }`;
+    const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
     const response = await fetch(url, { headers: authHeaders(apiKey) });
     if (!response.ok) {
-      throw new Error(`SocialData tweets fetch ${response.status} for ${userId}: ${await response.text()}`);
+      throw new Error(
+        `SocialData tweets fetch ${response.status} for ${baseUrl}: ${await response.text()}`,
+      );
     }
     const json = (await response.json()) as unknown;
     const parsed = TweetsResponseSchema.parse(json);
@@ -104,6 +118,44 @@ export const fetchTweets = async (
     cursor = parsed.next_cursor;
   }
   return out;
+};
+
+export const fetchTweets = async (
+  userId: string,
+  apiKey: string,
+  options: FetchTweetsOptions,
+): Promise<SocialDataTweet[]> => {
+  return paginateTweets(
+    `${BASE}/twitter/user/${encodeURIComponent(userId)}/tweets`,
+    apiKey,
+    options,
+  );
+};
+
+export const fetchListTweets = async (
+  listId: string,
+  apiKey: string,
+  options: FetchTweetsOptions,
+): Promise<SocialDataTweet[]> => {
+  return paginateTweets(
+    `${BASE}/twitter/list/${encodeURIComponent(listId)}/tweets`,
+    apiKey,
+    options,
+  );
+};
+
+export const fetchCommunityTweets = async (
+  communityId: string,
+  apiKey: string,
+  options: FetchTweetsOptions,
+  sort: "Latest" | "Top" = "Latest",
+): Promise<SocialDataTweet[]> => {
+  return paginateTweets(
+    `${BASE}/twitter/community/${encodeURIComponent(communityId)}/tweets`,
+    apiKey,
+    options,
+    { type: sort },
+  );
 };
 
 /** Pull profile and tweets in one call. */

@@ -9,12 +9,22 @@ loadDotenv();
 
 const VoiceLearningSchema = z.object({
   enabled: z.boolean().default(false),
-  /** Accounts whose voice you'd like to imitate. Their tweets are used as unlabeled style examples. */
+  /**
+   * Voice sources. Each entry is one of:
+   *   - a handle: `paulg`, `@paulg`, or a full profile URL
+   *   - an X List URL: `https://x.com/i/lists/1234567890`
+   *   - an X Community URL: `https://x.com/i/communities/1234567890`
+   * Lists and communities surface many authors at once — handy for broader
+   * tone signal, but a curated 3–5 handle list usually gives sharper voice.
+   */
   voice_accounts: z.array(z.string()).default([]),
-  /** Max tweets to pull per handle. */
-  max_tweets_per_handle: z.number().int().min(10).max(2000).default(300),
-  /** How many recent voice examples to surface per inspiration account. */
-  examples_per_voice_account: z.number().int().min(1).max(50).default(6),
+  /**
+   * Max tweets to pull per source (handle, list, or community). Lists and
+   * communities can be high-volume, so the practical ceiling is higher here.
+   */
+  max_tweets_per_handle: z.number().int().min(10).max(5000).default(300),
+  /** How many recent voice examples to surface per source in the writer prompt. */
+  examples_per_voice_account: z.number().int().min(1).max(200).default(6),
   /**
    * Drop tweets shorter than this many characters. Short one-liners give
    * weak voice signal — the writer learns more from tweets that show how

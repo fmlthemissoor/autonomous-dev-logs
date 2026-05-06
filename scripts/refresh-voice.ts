@@ -5,7 +5,7 @@ import { refreshVoiceCorpus, voiceLibraryPath } from "../src/stages/learn-voice.
 const main = async (): Promise<void> => {
   const { app, env } = loadConfig();
   console.log(
-    `[refresh-voice] fetching from ${app.voice_learning.voice_accounts.length} account(s): ` +
+    `[refresh-voice] fetching from ${app.voice_learning.voice_accounts.length} source(s): ` +
       app.voice_learning.voice_accounts.join(", "),
   );
   const corpus = await refreshVoiceCorpus(app, env);

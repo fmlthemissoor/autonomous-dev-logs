@@ -57,13 +57,19 @@ tweet_examples:
 # (pay-as-you-go, fractions of a cent per call).
 voice_learning:
   enabled: false
-  # Accounts whose tone/structure you want to mimic. Plain handles, no @.
-  # Pick 2-5 writers whose voice you genuinely admire — fewer, tighter signal
-  # beats a long list.
+  # Voice sources. Each entry is one of:
+  #   - a plain handle (no @ needed): paulg
+  #   - an X List URL:        https://x.com/i/lists/1234567890
+  #   - an X Community URL:   https://x.com/i/communities/1234567890
+  # A curated 3-5 handle list usually gives sharper voice signal than a big
+  # list — lists average across all members, which can blur the style.
   voice_accounts: []
-  # How many tweets to pull per handle. Higher = more signal, higher API cost.
+  # How many tweets to pull per source (handle / list / community).
+  # Lists are higher-volume so you may want to bump this for them.
   max_tweets_per_handle: 300
-  # How many recent originals per voice_account to surface as examples.
+  # How many recent originals per source to surface in the writer prompt.
+  # Bump this when reading from a list/community — 6 is fine for one writer,
+  # but for a list you probably want 30-100 to actually feel the voice.
   examples_per_voice_account: 6
   # Drop tweets shorter than this many characters. Short one-liners give
   # weak voice signal — the writer learns more from tweets that show how

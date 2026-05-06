@@ -105,11 +105,10 @@ export const renderChart = async (
       backgroundColor: seriesColor,
       borderColor: seriesColor,
       borderWidth: 0,
-      borderRadius: 4,
-      // Let bars fill their category slot rather than capping thickness —
-      // 3-category charts with a hard cap look like anemic pencils.
-      categoryPercentage: 0.7,
-      barPercentage: 0.85,
+      borderRadius: 3,
+      categoryPercentage: 0.6,
+      barPercentage: 0.45,
+      maxBarThickness: 28,
     };
   });
 
